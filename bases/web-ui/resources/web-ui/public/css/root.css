@@ -1,0 +1,16 @@
+body[data-theme="dark"] {
+}
+
+html,
+body {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    flex: 1;
+}
+body {
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    flex-direction: row;
+}

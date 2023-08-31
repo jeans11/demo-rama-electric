@@ -1,0 +1,23 @@
+{:tasks
+ {dev
+  {:doc "Start the dev environnment"
+   :task (clojure "-M:nrepl:dev:test")}
+
+  poly
+  {:doc "Polylith cli tool"
+   :task (clojure "-M:poly")}
+
+  build:client
+  {:doc "Build the client"
+   :task (clojure "-M:dev:shadow release app")}
+
+  build:server
+  {:doc "Build the server"
+   :task (clojure "-T:build uberjar :project web-app")}
+
+  -build:app
+  {:depends [build:client build:server]}
+
+  build:app
+  {:doc "Build the client and the server"
+   :task (run '-build:app)}}}
