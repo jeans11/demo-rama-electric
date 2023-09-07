@@ -1,5 +1,6 @@
 (ns dev.core
   (:require
+   [dev.css :as css]
    [quizy.server.core :as server]
    [shadow.cljs.devtools.api :as shadow.api]
    [shadow.cljs.devtools.server :as shadow.server]))
@@ -11,8 +12,8 @@
   (println "Starting compiler...")
   (shadow.server/start!)
   (shadow.api/watch :app)
-  ;;(println "Start css watcher...")
-  ;;(css/go)
+  (println "Start css watcher...")
+  (css/go)
   (println "Starting server...")
   (alter-var-root #'server (constantly (server/start-server!)))
   :idle)

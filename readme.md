@@ -8,6 +8,13 @@ The Polylith documentation can be found here:
 
 You can also get in touch with the Polylith Team on [Slack](https://clojurians.slack.com/archives/C013B7MQHJQ).
 
-<h1>demo-electric-rama</h1>
+<h1>Quizy</h1>
 
-<p>Add your workspace documentation here...</p>
+<h3>Start the project</h3>
+
+``` bash
+bb dev
+```
+
+Connect to the nrepl, go to the `development/src/dev/core.clj` and `start!`
+

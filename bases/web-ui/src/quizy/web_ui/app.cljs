@@ -1,4 +1,4 @@
-(ns quizy.web-ui.app
+(ns ^:dev/always quizy.web-ui.app
   (:require
    [hyperfiddle.electric :as e]
    [hyperfiddle.electric-dom2 :as dom]

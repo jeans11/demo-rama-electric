@@ -5,7 +5,7 @@
                 :asset-path "/js"
                 :modules {:main {:init-fn quizy.web-ui.app/start!}}
                 ;; For dev
-                :dev {#_#_:devtools {:watch-dir "bases/web-ui/resources/web-ui/public" ; live reload CSS
+                :dev {:devtools {:watch-dir "bases/web-ui/resources/web-ui/public/css" ; live reload CSS
                                  :hud #{:errors :progress}
                                  :ignore-warnings true}}
                 ;; For prod
