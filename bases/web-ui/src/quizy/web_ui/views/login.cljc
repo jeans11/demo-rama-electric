@@ -1,10 +1,22 @@
 (ns quizy.web-ui.views.login
   (:require
+   #?(:cljs [reagent.cookies :as cookies])
+   #?(:clj [quizy.server.rama :as rama])
    [clojure.string :as str]
    [hyperfiddle.electric :as e]
    [hyperfiddle.electric-dom2 :as dom]
-   [quizy.web-ui.routes :as routes]
+   #?(:cljs [quizy.web-ui.routes :as routes])
    [shadow.css :refer [css]]))
+
+(defn set-login-cookie [user-id]
+  #?(:cljs
+     (do
+       (cookies/set! :quizy-id user-id
+                     {:secure? false
+                      :raw? true
+                      :same-site :strict})
+       (prn "foo")
+       :idle)))
 
 (def styles
   {:login/container (css :flex :flex-1 :flex-col :justify-center :items-center)
@@ -71,7 +83,7 @@
         signup? (= mode "signup")]
     (dom/div
       (dom/props {:class (styles :login/container)})
-      (dom/h1 (dom/props {:class (styles :login/title)}) (dom/text "Quizy"))
+      #_(dom/h1 (dom/props {:class (styles :login/title)}) (dom/text "Quizy"))
       (dom/div
         (dom/props {:class (styles :login/inner-container)})
         (dom/form
@@ -87,10 +99,13 @@
               (dom/on "click" (e/fn [e]
                                 (.preventDefault e)
                                 (let [state @!state
-                                      status (e/server nil)]
+                                      {:keys [status] :as res} (e/server
+                                                                 (if signup?
+                                                                   (rama/process-signup state)
+                                                                   (rama/process-login state)))]
                                   (if (= status :idle)
-                                    (do
-                                      (routes/Navigate. :board {}))
+                                    (when (= :idle (set-login-cookie (:user-id res)))
+                                      (set! (.-href js/window.location) "/quizzes"))
                                     nil))))
               (dom/text (if signup? "Sign Up" "Sign In")))
             (dom/button

@@ -1,0 +1,14 @@
+[{:quiz/id #uuid"2897dfb5-5b78-4c63-84b3-e35c8f943df5"
+  :quiz/title "Downhill mountain bike"
+  :quiz/description "Are you really a DH fan?"
+  :quiz/level "easy"
+  :quiz/max-player-per-session 2
+  :quiz/questions [{:quiz.questions/id #uuid"6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
+                    :quiz.questions/max-second-to-answer 15
+                    :quiz.questions/points 1}
+                   {:quiz.questions/id #uuid"ed72d886-5c2c-4652-ae68-f84028abc5c5"
+                    :quiz.questions/max-second-to-answer 10
+                    :quiz.questions/points 2}
+                   {:quiz.questions/id #uuid"5da5069f-046f-49c3-8038-91507274dc34"
+                    :quiz.questions/max-second-to-answer 7
+                    :quiz.questions/points 3}]}]

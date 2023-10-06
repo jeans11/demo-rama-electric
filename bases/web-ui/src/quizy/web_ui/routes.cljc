@@ -1,16 +1,30 @@
 (ns quizy.web-ui.routes
   (:require
    [hyperfiddle.electric :as e]
-   [hyperfiddle.history :as history]
-   [reitit.core :as r]))
+   [missionary.core :as m]
+   [reitit.core :as r]
+   [reitit.frontend.easy :as rfe]))
 
-(e/def router)
+(e/def route-match)
+(e/def route-name)
 
-(defn create-router []
+(def router
   (r/router
-    [["/login" :login]
-     ["/signup" :signup]
-     ["/board" :board]]))
+   [["/login" :login]
+    ["/signup" :signup]
+    ["/quizzes" :quizzes]
+    ["/quizzes/:id" :quiz]
+    ["/sessions/:id" :session]]))
+
+(e/def re-router
+  (->> (m/observe
+        (fn [!]
+          (rfe/start!
+           router
+           !
+           {:use-fragment false})))
+       (m/relieve {})
+       new))
 
 (defn encode-uri [_router]
   (fn [{:keys [path]}]
@@ -22,4 +36,4 @@
 
 (e/defn Navigate
   [to params]
-  (history/navigate! history/!history (r/match-by-name router to params)))
+  (rfe/navigate to params))

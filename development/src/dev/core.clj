@@ -24,4 +24,6 @@
   (.stop server)
   (shadow.server/stop!)
 
+  (random-uuid)
+
   nil)

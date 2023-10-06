@@ -1,5 +1,7 @@
 (ns quizy.server.core
-   (:gen-class))
+  (:require [quizy.server.impl :as impl]
+            [quizy.server.rama :as rama])
+  (:gen-class))
 
 (defn start-server!
   []
@@ -7,7 +9,8 @@
                 :port 8080
                 :resources-path "web-ui/public"
                 :manifest-path "web-ui/public/js/manifest.edn"}]
-    #_(impl/start-server! config)))
+    (rama/start-the-engine!)
+    (impl/start-server! config)))
 
 (defn -main [& _args]
   (start-server!))
