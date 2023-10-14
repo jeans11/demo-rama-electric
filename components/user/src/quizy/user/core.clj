@@ -1,87 +1,68 @@
 (ns quizy.user.core
   (:require
-   [quizy.clj-rama.interface.block :as block]
-   [quizy.clj-rama.interface.helpers :as helpers]
-   [quizy.clj-rama.interface.path :as path])
+   [com.rpl.rama :as r]
+   [com.rpl.rama.path :as path])
   (:import
-   (com.rpl.rama
-    Block
-    Depot
-    Expr
-    PState
-    Path
-    RamaModule)
-   (com.rpl.rama.ops Ops RamaFunction1)
    (java.util UUID)))
 
 (defrecord UserSignup [id email display-name password])
 
-(def fixed-account-schema
-  (PState/fixedKeysSchema
-   (into-array Object ["email" String
-                       "password" String
-                       "display-name" String])))
+;; depot
+(def *signup-depot "*signup-depot")
+;; pstates
+(def $$email-to-signup "$$email-to-signup")
+(def $$accounts "$$accounts")
 
-(deftype ExtractEmail []
-  RamaFunction1
-  (invoke [_ _]
-    "email"))
+;; For the moment disable kondo on the defmodule
+#_:clj-kondo/ignore
+(r/defmodule SignupModule [setup topo]
+  (r/declare-depot setup *signup-depot (r/hash-by :email))
+  (let [s (r/stream-topology topo "signup")]
+    (r/declare-pstate s $$email-to-signup {String UUID})
+    (r/declare-pstate s $$accounts {UUID (r/fixed-keys-schema {:email String
+                                                               :password String
+                                                               :display-name String})})
+    (r/<<sources s
+                 (r/source> *signup-depot :> {:keys [*id *email *password *display-name]})
+                 (r/local-select> (path/keypath *email) $$email-to-signup :> *existing-id)
+                 (r/<<if (r/or> (nil? *existing-id)
+                                (= *id *existing-id))
+                         (r/local-transform> [(path/keypath *email) (path/termval *id)] $$email-to-signup)
+                         (r/|hash *id)
+                         (r/local-transform> [(path/keypath *id)
+                                              (path/multi-path [:email (path/termval *email)]
+                                                               [:password (path/termval *password)]
+                                                               [:display-name (path/termval *display-name)])]
+                                             $$accounts)))))
 
-(deftype SignupModule []
-  RamaModule
-  (define [_ setup topo]
-    (.declareDepot setup "*signup-depot" (Depot/hashBy ExtractEmail))
-    (let [signup (.stream topo "signup")]
-      (.pstate signup "$$email-to-signup" (PState/mapSchema String UUID))
-      (.pstate signup "$$accounts" (PState/mapSchema UUID fixed-account-schema))
-
-      (-> (.source signup "*signup-depot") (block/out "*payload")
-          (helpers/bind-field "*payload" "id" "*id")
-          (helpers/bind-field "*payload" "email" "*email")
-          (helpers/bind-field "*payload" "password" "*password")
-          (helpers/bind-field "*payload" "display_name" "*display-name")
-          (.localSelect "$$email-to-signup" (path/key "*email")) (block/out "*existing-id")
-          (.ifTrue (Expr. Ops/OR
-                          (into-array Object
-                                      [(Expr. Ops/IS_NULL "*existing-id")
-                                       (Expr. Ops/EQUAL "*id" "*existing-id")]))
-                   (-> (Block/localTransform "$$email-to-signup" (-> (path/key "*email") (.termVal "*id")))
-                       (.hashPartition "*id")
-                       (.localTransform "$$accounts"
-                                        (-> (path/key "*id")
-                                            (.multiPath
-                                             (into-array Path [(-> (path/key "email") (.termVal "*email"))
-                                                               (-> (path/key "password") (.termVal "*password"))
-                                                               (-> (path/key "display-name") (.termVal "*display-name"))]))))))))))
-
-(def signup-module-name (.getName SignupModule))
+(def signup-module-name (r/get-module-name SignupModule))
 
 (defn get-signup-depot [cluster]
-  (.clusterDepot cluster signup-module-name "*signup-depot"))
+  (r/foreign-depot cluster signup-module-name *signup-depot))
 
 (defn get-accounts-pstate [cluster]
-  (.clusterPState cluster signup-module-name "$$accounts"))
+  (r/foreign-pstate cluster signup-module-name $$accounts))
 
 (defn get-emails-pstate [cluster]
-  (.clusterPState cluster signup-module-name "$$email-to-signup"))
+  (r/foreign-pstate cluster signup-module-name $$email-to-signup))
 
 (defn send-signup [signup-depot payload]
   (let [id (UUID/randomUUID)
         signup-record (map->UserSignup (assoc payload :id id))]
-    (.append signup-depot signup-record)
+    (r/foreign-append! signup-depot signup-record)
     id))
 
 (defn get-user-by-id [accounts-pstate user-id]
-  (.selectOne accounts-pstate (path/key user-id)))
+  (r/foreign-select-one (path/keypath user-id) accounts-pstate))
 
 (defn check-signup [accounts-pstate user-id]
   (some? (get-user-by-id accounts-pstate user-id)))
 
 (defn login [{:keys [accounts emails]} {:keys [email password]}]
-  (when-some [user-id (.selectOne emails (path/key email))]
+  (when-some [user-id (r/foreign-select-one (path/keypath email) emails)]
     (let [user (get-user-by-id accounts user-id)]
       (when (= password (get user "password"))
         user-id))))
 
 (defn get-signup-module []
-  (->SignupModule))
+  SignupModule)

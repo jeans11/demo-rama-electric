@@ -11,10 +11,10 @@
                  "bases/server/src"
                  "bases/web-ui/resources"
                  "bases/web-ui/src"
+                 "components/belt/resources"
+                 "components/belt/src"
                  "components/user/resources"
                  "components/user/src"
-                 "components/clj-rama/resources"
-                 "components/clj-rama/src"
                  "components/quiz/resources"
                  "components/quiz/src"
                  "components/session/resources"
@@ -52,8 +52,8 @@
                 ;; Data viewer
                 djblue/portal {:mvn/version "0.44.0"}
                 ;; Rama stuff
-                com.rpl/rama {:mvn/version "0.9.4"}
-                com.rpl/rama-helpers {:mvn/version "0.9.0"}}}
+                com.rpl/rama {:mvn/version "0.10.0"}
+                com.rpl/rama-helpers {:mvn/version "0.9.1"}}}
 
   :test
   {:extra-paths ["bases/server/test"

@@ -3,18 +3,19 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.walk :as walk]
+   [com.rpl.rama :as r]
+   [com.rpl.rama.path :as path]
+   [com.rpl.rama.test :as rtest]
    [quizy.quiz.interface :as quiz]
    [quizy.session.interface :as session]
-   [quizy.user.interface :as user]
-   [quizy.clj-rama.interface.path :as path])
+   [quizy.user.interface :as user])
   (:import
-   (com.rpl.rama.test InProcessCluster LaunchConfig)
    (java.util UUID)))
 
 (defonce system nil)
 
 (defn -run-module [cluster module]
-  (.launchModule cluster module (LaunchConfig. 1 1)))
+  (rtest/launch-module! cluster module {:tasks 1 :threads 1}))
 
 (defn -make-system [cluster]
   (fn [_]
@@ -44,7 +45,7 @@
 
 (defn start-the-engine! []
   (println "Start rama cluster...")
-  (let [cluster (InProcessCluster/create)]
+  (let [cluster (rtest/create-ipc)]
     (try
       (-run-module cluster (user/get-signup-module))
       (-run-module cluster (quiz/get-quiz-module))
@@ -55,6 +56,13 @@
       (catch Exception ex
         (.printStackTrace ex)
         (.close cluster)))))
+
+(defn stop-the-engine! []
+  (println "Stop rama cluster...")
+  (r/close! (:cluster system))
+  (alter-var-root #'system (constantly nil))
+  (println "Rama cluster stopped")
+  :done)
 
 (defn process-signup [payload]
   (let [id (user/send-signup (-get-depot :signup) payload)]
@@ -115,24 +123,26 @@
 (defn retrieve-current-leaderboard [users-id results]
   (let [user-pstate (-get-pstate :accounts)]
     (->> (into [] (comp
-                   (map #(hash-map :id % :display-name (.selectOne user-pstate (path/key % "display-name"))))
+                   (map #(hash-map :id %
+                                   :display-name (r/foreign-select-one (path/keypath % :display-name) user-pstate)))
                    (map #(assoc % :score (get results (:id %) 0))))
                users-id)
          (sort-by :score >)
          (map-indexed vector))))
 
+(defn retrieve-questions [questions]
+  (let [paths (mapv (fn [q] (path/keypath (:id q))) questions)]
+    (r/foreign-select (apply path/multi-path paths)
+                      (-get-pstate :questions))))
+
 (comment
 
-  (import '(com.rpl.rama Path))
-
   system
-
-  (.select (-get-pstate :accounts) (Path/all))
-  (.select (-get-pstate :emails) (Path/all))
 
   (require '[clojure.java.io :as io])
   (require '[clojure.edn :as edn])
   (require '[clojure.walk :as walk])
+
   (def questions (-> (io/resource "server/fixtures/questions.edn")
                      (slurp)
                      (edn/read-string)))
@@ -150,13 +160,18 @@
   (def session-user-depot (session/get-session-users-depot (:cluster system)))
 
   (doseq [question questions]
-    (quiz/send-question question-depot (walk/stringify-keys question)))
+    (quiz/send-question question-depot (walk/postwalk
+                                         (fn [n] (if (keyword? n) (-> n (name) (keyword)) n))
+                                         question)))
 
   (doseq [quiz quizzes]
-    (quiz/send-quiz {:quiz quiz-depot :session session-depot} (walk/stringify-keys quiz)))
+    (quiz/send-quiz {:quiz quiz-depot :session session-depot}
+                    (walk/postwalk
+                      (fn [n] (if (keyword? n) (-> n (name) (keyword)) n))
+                      quiz)))
 
   (def user-id (random-uuid))
-  (def session-id #uuid"ec56376d-27e1-41cb-b3e9-424f37618bd2")
+  (def session-id #uuid"d7799a5b-2072-4740-a44a-846d65289bb4")
 
   (session/send-user-session session-user-depot
                              session-id
@@ -166,30 +181,27 @@
                                session-id
                                user-id)
 
-  (def question-pstate (quiz/get-questions-pstate (:cluster system)))
-  (def quiz-pstate (quiz/get-quizzes-pstate (:cluster system)))
-  (def session-pstate (session/get-sessions-pstate (:cluster system)))
-  (def session-users-vote (-get-pstate :session-users-vote))
-
-  (require '[quizy.clj-rama.interface.path :as path])
-
-  (.selectOne question-pstate (path/key #uuid"5da5069f-046f-49c3-8038-91507274dc34"))
-  (.select quiz-pstate (Path/all))
-  (.select session-pstate (Path/all))
-  (.select question-pstate (Path/all))
-  (.select session-users-vote (Path/all))
-
-  (.close (:cluster system))
+  (stop-the-engine!)
   (start-the-engine!)
 
-  (retrieve-quizzes)
+  (process-signup {:email "j@b.com"
+                   :password "secret"
+                   :display-name "J"})
 
-  (import '(java.time Instant))
-  (Instant/ofEpochMilli 1695224836384)
+  (def accounts-pstate (-get-pstate :accounts))
+  (def questions-pstate (-get-pstate :questions))
+  (def quizzes-pstate (-get-pstate :quizzes))
+  (def sessions-pstate (-get-pstate :sessions))
 
-  (-> (Instant/now)
-      (.plusSeconds (* 60 2))
-      (.toEpochMilli)
-      (Instant/ofEpochMilli))
+  (r/foreign-select path/ALL accounts-pstate)
+  (r/foreign-select path/ALL questions-pstate)
+  (r/foreign-select path/ALL quizzes-pstate)
+  (r/foreign-select path/ALL sessions-pstate)
+  (r/foreign-select-one (path/keypath #uuid"10e5c34f-4efc-4de4-885a-1f88b1b39b5a") accounts-pstate)
+
+  (retrieve-questions [{:id #uuid "5da5069f-046f-49c3-8038-91507274dc34"}
+                       {:id #uuid "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"}])
+
+  (random-uuid)
 
   nil)

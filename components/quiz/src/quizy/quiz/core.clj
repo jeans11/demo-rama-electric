@@ -1,155 +1,124 @@
 (ns quizy.quiz.core
   (:require
-   [quizy.clj-rama.interface.block :as block]
-   [quizy.clj-rama.interface.helpers :as helpers]
-   [quizy.clj-rama.interface.path :as path]
-   [clojure.walk :as walk]
+   [com.rpl.rama :as r]
+   [com.rpl.rama.path :as path]
    [quizy.session.interface :as session])
   (:import
-   (com.rpl.rama
-    Block
-    Depot
-    Expr
-    PState
-    Path
-    RamaModule)
-   (com.rpl.rama.ops Ops RamaFunction1 RamaFunction2)
    (java.util UUID)))
 
-(deftype ExtractId []
-  RamaFunction1
-  (invoke [_ _]
-    "id"))
-
 (def quiz-data-schema
-  (PState/mapSchema
-   UUID
-   (PState/fixedKeysSchema
-    (into-array Object ["title" String
-                        "description" String
-                        "level" String
-                        "max-player-per-session" Integer
-                        "total-question" Integer
-                        "questions" (PState/listSchema
-                                     (PState/fixedKeysSchema
-                                      (into-array Object ["id" UUID
-                                                          "max-second-to-answer" Integer
-                                                          "points" Integer])))]))))
+  {UUID (r/fixed-keys-schema
+         {:title String
+          :description String
+          :level String
+          :max-player-per-session Long
+          :total-question Integer
+          :questions (r/vector-schema
+                      (r/fixed-keys-schema
+                       {:id UUID
+                        :max-second-to-answer Long
+                        :points Long}))})})
 
 (def question-data-schema
-  (PState/mapSchema
-   UUID
-   (PState/fixedKeysSchema
-    (into-array Object ["title" String
-                        "right-answer" UUID
-                        "choices" (PState/listSchema
-                                   (PState/fixedKeysSchema
-                                    (into-array Object ["id" UUID
-                                                        "value" String])))]))))
-
+  {UUID (r/fixed-keys-schema {:title String
+                              :right-answer UUID
+                              :choices (r/vector-schema (r/fixed-keys-schema {:id UUID
+                                                                              :value String}))})})
 (def quiz-sessions-schema
-  (PState/mapSchema
-   UUID
-   (PState/listSchema UUID)))
+  {UUID (r/vector-schema UUID)})
 
 (defrecord QuestionRecord [id title right-answer choices])
-(defrecord ChoicesQuestionRecord [id value right-answer])
 (defrecord QuizRecord [id title level session-id description max-player-per-session questions])
 
-(deftype QuizModule []
-  RamaModule
-  (define [_ setup topo]
-    (.declareDepot setup "*quiz-depot" (Depot/hashBy ExtractId))
-    (.declareDepot setup "*question-depot" (Depot/hashBy ExtractId))
-    (let [quiz (.stream topo "quiz")
-          question (.stream topo "question")]
-      (.pstate quiz "$$quiz" quiz-data-schema)
-      (.pstate question "$$question" question-data-schema)
-      (.pstate quiz "$$quiz-sessions" quiz-sessions-schema)
+;; depots
+(def *quiz-depot "*quiz-depot")
+(def *question-depot "*question-depot")
+;; pstates
+(def $$quiz "$$quiz")
+(def $$question "$$question")
+(def $$quiz-sessions "$$quiz-sessions")
 
-      ;; Question
-      (-> (.source question "*question-depot") (block/out "*question")
-          (helpers/bind-field "*question" "id" "*id")
-          (helpers/bind-field "*question" "title" "*title")
-          (helpers/bind-field "*question" "right_answer" "*right-answer")
-          (helpers/bind-field "*question" "choices" "*choices")
-          (.localTransform "$$question" (-> (path/key "*id")
-                                            (.multiPath
-                                             (into-array Path [(-> (path/key "title") (.termVal "*title"))
-                                                               (-> (path/key "right-answer") (.termVal "*right-answer"))
-                                                               (-> (path/key "choices") (.termVal "*choices"))])))))
-      ;; Quiz
-      (-> (.source quiz "*quiz-depot") (block/out "*quiz")
-          (helpers/bind-field "*quiz" "id" "*id")
-          (helpers/bind-field "*quiz" "title" "*title")
-          (helpers/bind-field "*quiz" "description" "*desc")
-          (helpers/bind-field "*quiz" "max_player_per_session" "*mpps")
-          (helpers/bind-field "*quiz" "level" "*level")
-          (helpers/bind-field "*quiz" "questions" "*questions")
-          (helpers/bind-field "*quiz" "session_id" "*session-id")
-          (.each Ops/SIZE "*questions") (block/out "*total-question")
-          (.localTransform "$$quiz-sessions" (-> (path/key "*id")
-                                                 (.nullToList)
-                                                 (.afterElem)
-                                                 (.termVal "*session-id")))
-          (.localTransform "$$quiz" (-> (path/key "*id")
-                                        (.multiPath
-                                         (into-array Path [(-> (path/key "title") (.termVal "*title"))
-                                                           (-> (path/key "description") (.termVal "*desc"))
-                                                           (-> (path/key "max-player-per-session") (.termVal "*mpps"))
-                                                           (-> (path/key "level") (.termVal "*level"))
-                                                           (-> (path/key "total-question") (.termVal "*total-question"))
-                                                           (-> (path/key "questions") (.termVal "*questions"))]))))))))
+#_:clj-kondo/ignore
+(r/defmodule QuizModule [setup topo]
+  (r/declare-depot setup *quiz-depot (r/hash-by :id))
+  (r/declare-depot setup *question-depot (r/hash-by :id))
+  (let [s (r/stream-topology topo "quiz")]
+    (r/declare-pstate s $$quiz quiz-data-schema)
+    (r/declare-pstate s $$question question-data-schema)
+    (r/declare-pstate s $$quiz-sessions quiz-sessions-schema)
+    (r/<<sources s
+                 ;; Question
+                 (r/source> *question-depot :> {:keys [*id *title *right-answer *choices]})
+                 (r/local-transform> [(path/keypath *id)
+                                      (path/multi-path [:title (path/termval *title)]
+                                                       [:right-answer (path/termval *right-answer)]
+                                                       [:choices (path/termval *choices)])]
+                                     $$question)
+                 ;; Quiz
+                 (r/source> *quiz-depot :> {:keys [*id *title *description *level
+                                                   *max-player-per-session *session-id
+                                                   *questions]})
+                 (count *questions :> *total-question)
+                 (r/local-transform> [(path/keypath *id)
+                                      path/NIL->LIST
+                                      path/AFTER-ELEM
+                                      (path/termval *session-id)]
+                                     $$quiz-sessions)
+                 (r/local-transform> [(path/keypath *id)
+                                      (path/multi-path [:title (path/termval *title)]
+                                                       [:description (path/termval *description)]
+                                                       [:max-player-per-session (path/termval *max-player-per-session)]
+                                                       [:level (path/termval *level)]
+                                                       [:total-question (path/termval *total-question)]
+                                                       [:questions (path/termval *questions)])]
+                                     $$quiz))))
 
-(def quiz-module-name (.getName QuizModule))
+(def quiz-module-name (r/get-module-name QuizModule))
 
 (defn get-question-depot [cluster]
-  (.clusterDepot cluster quiz-module-name "*question-depot"))
+  (r/foreign-depot cluster quiz-module-name *question-depot))
 
 (defn get-questions-pstate [cluster]
-  (.clusterPState cluster quiz-module-name "$$question"))
+  (r/foreign-pstate cluster quiz-module-name $$question))
 
 (defn get-quiz-depot [cluster]
-  (.clusterDepot cluster quiz-module-name "*quiz-depot"))
+  (r/foreign-depot cluster quiz-module-name *quiz-depot))
 
 (defn get-quizzes-pstate [cluster]
-  (.clusterPState cluster quiz-module-name "$$quiz"))
+  (r/foreign-pstate cluster quiz-module-name $$quiz))
 
 (defn get-quiz-sessions-pstate [cluster]
-  (.clusterPState cluster quiz-module-name "$$quiz-sessions"))
+  (r/foreign-pstate cluster quiz-module-name $$quiz-sessions))
 
 (defn send-question [question-depot question]
   (let [question-record (map->QuestionRecord (update-keys question keyword))]
-    (.append question-depot question-record)))
+    (r/foreign-append! question-depot question-record)))
 
 (defn send-quiz [depots quiz]
   (let [session-id (random-uuid)
-        quiz-record (map->QuizRecord
-                     (-> (update-keys quiz keyword)
-                         (assoc :session-id session-id)))]
+        quiz-record (map->QuizRecord (assoc quiz :session-id session-id))]
     (session/send-session (:session depots) {:id session-id
                                              :quiz-id (:id quiz-record)
                                              :users-id #{}})
-    (.append (:quiz depots) quiz-record)))
+    (tap> quiz-record)
+    (tap> (type (:max-player-per-session quiz-record)))
+    (r/foreign-append! (:quiz depots) quiz-record)))
 
 (defn get-quiz-module []
-  (->QuizModule))
+  QuizModule)
 
 (defn get-quizzes [quizzes-pstate]
-  (let [all-quizzes (.select quizzes-pstate (Path/all))]
+  (let [all-quizzes (r/foreign-select path/ALL quizzes-pstate)]
     (into []
           (map (fn [[id quiz]]
-                 (-> (walk/keywordize-keys quiz)
-                     (assoc :id id))))
+                 (assoc quiz :id id)))
           all-quizzes)))
 
 (defn get-quiz-by-id [quizzes-pstate quiz-id]
-  (let [quiz (.selectOne quizzes-pstate (path/key quiz-id))]
-    (walk/keywordize-keys quiz)))
+  (r/foreign-select-one (path/keypath quiz-id) quizzes-pstate))
 
 (defn get-question-by-id [questions-pstate question-id]
-  (let [question (.selectOne questions-pstate (path/key question-id))]
-    (walk/keywordize-keys question)))
+  (r/foreign-select-one (path/keypath question-id) questions-pstate))
 
 (defn get-quiz-sessions [quiz-session-pstate quiz-id]
-  (.selectOne quiz-session-pstate (path/key quiz-id)))
+  (r/foreign-select-one (path/keypath quiz-id) quiz-session-pstate))
