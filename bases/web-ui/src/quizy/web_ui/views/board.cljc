@@ -26,7 +26,7 @@
     (dom/div
       (dom/props {:class (styles :avatar/image)})
       (set! (.-innerHTML dom/node) default-avatar-svg))
-    (dom/div (dom/text (get current-user "display-name")))))
+    (dom/div (dom/text (:display-name current-user)))))
 
 (e/defn Header []
   (dom/header

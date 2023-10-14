@@ -19,8 +19,13 @@
    :question/next-question-container (css :flex :flex-1 :justify-between)
    :question/point-container (css :flex :flex-1 :justify-end)
    :quiz-engine/container (css :flex :flex-1 :flex :justify-center)
-   :results/title (css :text-gray-700 :text-xl)
-   :results/spacer (css :ml-5 :mr-5 :bg-gray-200 {:width "1px"})})
+   :results/title (css :text-gray-700 :text-xl :mb-2)
+   :results/spacer (css :ml-5 :mr-5 :bg-gray-200 {:width "1px"})
+   :responses/container (css :mt-3)
+   :responses/title (css :text-gray-700 :text-xl)
+   :responses/item (css :flex :flex-col :rounded-md :p-3 :mb-3 {:background-color "#fff"})
+   :responses/item-question-title (css :text-gray-700 :text-lg)
+   :responses/item-response-value (css :font-semibold {:text-align "end"})})
 
 (defn format-time-before-start [time-ms]
   #?(:cljs
@@ -48,11 +53,11 @@
         (dom/props {:class (styles :waiting/second-title)})
         (dom/text (str "when " nb-missing-user " attendees will join the session"))))))
 
-(defn get-time-ms [_]
+(defn get-time-ms [_ _]
   #?(:cljs (js/Date.now)))
 
-(e/defn compute-time-before-next-question [second-to-answer]
-  (-> (+ (get-time-ms second-to-answer) (* second-to-answer 1000))
+(e/defn compute-time-before-next-question [question-index second-to-answer]
+  (-> (+ (get-time-ms question-index second-to-answer) (* second-to-answer 1000))
       (- e/system-time-ms)
       (/ 1000)
       (js/Math.floor)))
@@ -68,59 +73,71 @@
     (dom/div
       (dom/props {:class (styles :quiz-engine/container)})
       (if (<= (inc question-index) (count questions))
-        (let [quiz-question (nth questions (or question-index 0))
-              points (:points quiz-question)
-              second-to-answer (inc (:max-second-to-answer quiz-question))
-              question (e/server (rama/retrieve-question-by-id (:id quiz-question)))
-              time-before-next-question (compute-time-before-next-question. second-to-answer)]
+          (let [quiz-question (nth questions (or question-index 0))
+                points (:points quiz-question)
+                second-to-answer (inc (:max-second-to-answer quiz-question))
+                question (e/server (rama/retrieve-question-by-id (:id quiz-question)))
+                time-before-next-question (compute-time-before-next-question. question-index second-to-answer)]
 
-          (when (zero? time-before-next-question)
-            (swap! !question-index inc)
-            (e/server (rama/process-next-question {:user-id user-id
-                                                   :session-id session-id
-                                                   :question-id (:id quiz-question)
-                                                   :right-choice (:right-answer question)
-                                                   :points points})))
-          (dom/div
-            (dom/h1
-              (dom/props {:class (styles :question/title)})
-              (dom/text (:title question)))
-
+            (when (zero? time-before-next-question)
+              (swap! !question-index inc)
+              (e/server (rama/process-next-question {:user-id user-id
+                                                     :session-id session-id
+                                                     :question-id (:id quiz-question)
+                                                     :right-choice (:right-answer question)
+                                                     :points points})))
             (dom/div
-              (dom/props {:class (styles :question/point-container)})
-              (dom/p (dom/text (str points (str " point" (when (> points 1) "s"))))))
+              (dom/h1
+                (dom/props {:class (styles :question/title)})
+                (dom/text (:title question)))
 
-            (dom/ul
-              (dom/props {:class (styles :question/choices-container)})
-              (e/for-by :id [choice (:choices question)]
-                (dom/li
-                  (dom/props {:class [(styles :question/choice)
-                                      (styles (if (= choice-clicked (:id choice))
-                                                :question/choice-clicked
-                                                :question/choice-blank))]})
-                  (dom/on "click" (e/fn [_]
-                                    (reset! !choice-clicked (:id choice))
-                                    (e/server (rama/process-user-vote
-                                               {:session-id session-id
-                                                :user-id user-id
-                                                :question-id (:id quiz-question)
-                                                :choice-id (:id choice)})
-                                              nil)))
-                  (dom/text (:value choice)))))
-
-            (when (some? question)
               (dom/div
-                (dom/props {:class (styles :question/next-question-container)})
-                (dom/p (dom/text (str (inc question-index) "/" (count questions))))
-                (dom/p (dom/text (str "Next question in " time-before-next-question "s")))))))
-        (dom/div
-          (dom/props {:class (styles :question-answer/container)})
-          (dom/h1 (dom/text "Responses"))))
+                (dom/props {:class (styles :question/point-container)})
+                (dom/p (dom/text (str points (str " point" (when (> points 1) "s"))))))
+
+              (dom/ul
+                (dom/props {:class (styles :question/choices-container)})
+                (e/for-by :id [choice (:choices question)]
+                  (dom/li
+                    (dom/props {:class [(styles :question/choice)
+                                        (styles (if (= choice-clicked (:id choice))
+                                                  :question/choice-clicked
+                                                  :question/choice-blank))]})
+                    (dom/on "click" (e/fn [_]
+                                      (reset! !choice-clicked (:id choice))
+                                      (e/server (rama/process-user-vote
+                                                 {:session-id session-id
+                                                  :user-id user-id
+                                                  :question-id (:id quiz-question)
+                                                  :choice-id (:id choice)})
+                                                nil)))
+                    (dom/text (:value choice)))))
+
+              (when (some? question)
+                (dom/div
+                  (dom/props {:class (styles :question/next-question-container)})
+                  (dom/p (dom/text (str (inc question-index) "/" (count questions))))
+                  (dom/p (dom/text (str "Next question in " time-before-next-question "s")))))))
+          (dom/div
+            (dom/props {:class (styles :question-answer/container)})
+            (dom/h1
+              (dom/props {:class (styles :responses/title)})
+              (dom/text "Responses"))
+            (dom/div (dom/props {:class (styles :responses/container)})
+                     (e/for-by :right-answer [question (e/server (rama/retrieve-questions questions))]
+                       (dom/div (dom/props {:class (styles :responses/item)})
+                                (dom/h2
+                                  (dom/props {:class (styles :responses/item-question-title)})
+                                  (dom/text (:title question)))
+                                (dom/span
+                                  (dom/props {:class (styles :responses/item-response-value)})
+                                  (dom/text (let [right-choice (first (filter #(= (:id %) (:right-answer question))
+                                                                              (:choices question)))]
+                                              (:value right-choice)))))))))
       (dom/div (dom/props {:class (styles :results/spacer)}))
       (let [leaderboard (e/server
                           (let [results (new (rama/!latest-session-results session-id))]
                             (rama/retrieve-current-leaderboard (:users-id session) results)))]
-        (prn leaderboard)
         (dom/div
           (dom/props {:class (styles :results/container)})
           (dom/h1
@@ -128,7 +145,10 @@
             (dom/text "Leaderboard"))
           (dom/ul
             (e/for-by first [[idx user] leaderboard]
-                      (dom/li (dom/text (:display-name user))))))))))
+              (dom/li
+                (dom/span (dom/text (str (:display-name user) ": ")))
+                (dom/span (dom/text (let [score (:score user)]
+                                      (str score " point" (when (> score 1) "s")))))))))))))
 
 (e/defn QuizSession [session-id user-id]
   ;; Handle add/remove user into the session
