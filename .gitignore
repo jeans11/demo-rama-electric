@@ -46,3 +46,6 @@ projects/**/pom.xml
 
 # js output
 bases/web-ui/resources/web-ui/public/js
+
+# css output
+bases/web-ui/resources/web-ui/public/css/ui.css
