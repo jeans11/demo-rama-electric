@@ -87,7 +87,8 @@
       (dom/div
         (dom/props {:class (styles :login/inner-container)})
         (dom/form
-          (dom/props {:class (styles :form/container)})
+          (dom/props {:autocomplete "off"
+                      :class (styles :form/container)})
           (EmailField. (e/fn [value] (swap! !state assoc :email value)))
           (PasswordField. (e/fn [value] (swap! !state assoc :password value)))
           (when signup?

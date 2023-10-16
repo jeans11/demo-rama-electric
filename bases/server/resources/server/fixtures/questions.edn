@@ -1,5 +1,5 @@
 [{:question/id #uuid"6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
-  :question/title "How many world champs Loic Bruni wins?"
+  :question/title "How many world champs did Loic Bruni win?"
   :question/right-answer #uuid"38cff964-19b4-4d1a-b685-2386c8d10ffb"
   :question/choices [{:question.choices/id #uuid"15500f7c-b49b-4792-99c0-6b9ea7c0f53c"
                       :question.choices/value "3"}
