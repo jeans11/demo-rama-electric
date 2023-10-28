@@ -6,7 +6,8 @@
               "-XX:-OmitStackTraceInFastThrow"
               "-XX:+UnlockDiagnosticVMOptions"
               "-XX:+DebugNonSafepoints"]
-   :extra-paths ["development/src"
+   :extra-paths ["development/resources"
+                 "development/src"
                  "bases/server/resources"
                  "bases/server/src"
                  "bases/web-ui/resources"

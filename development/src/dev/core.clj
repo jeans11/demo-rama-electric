@@ -1,9 +1,11 @@
 (ns dev.core
   (:require
    [dev.css :as css]
+   [dev.fixtures :as fixtures]
    [quizy.server.core :as server]
    [shadow.cljs.devtools.api :as shadow.api]
-   [shadow.cljs.devtools.server :as shadow.server]))
+   [shadow.cljs.devtools.server :as shadow.server]
+   [quizy.server.rama :as rama]))
 
 (defonce server nil)
 
@@ -16,6 +18,8 @@
   (css/go)
   (println "Starting server...")
   (alter-var-root #'server (constantly (server/start-server!)))
+  (println "Inject quizzes/questions fixtures...")
+  (fixtures/create-fixtures rama/system)
   :idle)
 
 (comment
@@ -23,7 +27,5 @@
   (start!)
   (.stop server)
   (shadow.server/stop!)
-
-  (random-uuid)
 
   nil)
