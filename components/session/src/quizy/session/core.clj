@@ -15,28 +15,19 @@
 (defn compute-score [points v]
   (+ v points))
 
-(def session-data-schema
-  {UUID (r/fixed-keys-schema
-         {:quiz-id UUID
-          :users-id (r/set-schema UUID)
-          :start-at Long
-          :results {UUID Long}})})
-
-(def session-users-vote-schema
-  {UUID {UUID {UUID (r/fixed-keys-schema {:vote UUID})}}})
-
 (defrecord SessionRecord [id quiz-id users-id])
 (defrecord SessionUserRecord [session-id user-id action])
 (defrecord SessionUserVoteRecord [session-id user-id question-id choice-id])
 (defrecord SessionNextQuestionRecord [user-id session-id next-question-index
                                       question-id right-choice points])
+
 ;; depots
 (def *session-depot "*session-depot")
 (def *session-users-depot "*session-users-depot")
 (def *session-users-vote-depot "*session-users-vote-depot")
 (def *session-next-question-depot "*session-next-question-depot")
 ;; pstates
-(def $$session "$$session")
+(def $$sessions "$$sessions")
 (def $$session-users-vote "$$session-users-vote")
 
 #_:clj-kondo/ignore
@@ -47,41 +38,46 @@
   (r/declare-depot setup *session-next-question-depot (r/hash-by :user-id))
 
   (let [s (r/stream-topology topo "session")]
-    (r/declare-pstate s $$session session-data-schema)
-    (r/declare-pstate s $$session-users-vote session-users-vote-schema)
+    ;; Sessions
+    (r/declare-pstate s $$sessions {String (r/fixed-keys-schema
+                                            {:quiz-id String
+                                             :users-id (r/set-schema String)
+                                             :start-at Long
+                                             :results {String Long}})})
+    ;; Users vote
+    (r/declare-pstate s $$session-users-vote {String {String {String (r/fixed-keys-schema {:vote String})}}})
 
     (r/<<sources s
                  ;; Session
-                 (r/source> *session-depot :> {:keys [*id *quiz-id *users-id]})
+                 (r/source> *session-depot :> {:keys [*id] :as *session})
                  (r/local-transform> [(path/keypath *id)
-                                      (path/multi-path [:quiz-id (path/termval *quiz-id)]
-                                                       [:users-id (path/termval *users-id)])]
-                                     $$session)
+                                      (path/termval (into {} (dissoc *session :id)))]
+                                     $$sessions)
                  ;; Attendee
                  (r/source> *session-users-depot :> {:keys [*session-id *user-id *action]})
                  (r/<<if (= *action "add")
-                         (r/local-select> (path/keypath *session-id :users-id) $$session :> *session-users)
+                         (r/local-select> (path/keypath *session-id :users-id) $$sessions :> *session-users)
                          (r/local-transform> [(path/keypath *session-id :users-id)
                                               path/NIL->SET
                                               path/NONE-ELEM
                                               (path/termval *user-id)]
-                                             $$session)
+                                             $$sessions)
                          (count *session-users :> *total-user)
                          (r/<<if (zero? *total-user)
                                  (r/local-transform> [(path/keypath *session-id :start-at)
                                                       (path/term get-start-at)]
-                                                     $$session)))
+                                                     $$sessions)))
                  (r/<<if (= *action "remove")
-                         (r/local-select> (path/keypath *session-id :users-id) $$session :> *session-users)
+                         (r/local-select> (path/keypath *session-id :users-id) $$sessions :> *session-users)
                          (r/local-transform> [(path/keypath *session-id :users-id)
                                               (path/set-elem *user-id)
                                               r/NONE>]
-                                             $$session)
+                                             $$sessions)
                          (count *session-users :> *total-user)
                          (r/<<if (= *total-user 1)
                                  (r/local-transform> [(path/keypath *session-id :start-at)
                                                       (path/termval nil)]
-                                                     $$session)))
+                                                     $$sessions)))
                  ;; User vote
                  (r/source> *session-users-vote-depot :> {:keys [*session-id *user-id *question-id *choice-id]})
                  (r/local-transform> [(path/keypath *user-id *session-id *question-id :vote)
@@ -98,7 +94,7 @@
                          (r/local-transform> [(path/keypath *session-id :results *user-id)
                                               (path/nil->val 0)
                                               (path/term (partial compute-score *points))]
-                                             $$session)))))
+                                             $$sessions)))))
 
 (def session-module-name (r/get-module-name SessionModule))
 
@@ -115,7 +111,7 @@
   (r/foreign-depot cluster session-module-name *session-next-question-depot))
 
 (defn get-sessions-pstate [cluster]
-  (r/foreign-pstate cluster session-module-name $$session))
+  (r/foreign-pstate cluster session-module-name $$sessions))
 
 (defn get-session-users-vote-pstate [cluster]
   (r/foreign-pstate cluster session-module-name $$session-users-vote))
@@ -150,17 +146,11 @@
 (defn get-session-by-id [session-pstate session-id]
   (r/foreign-select-one (path/keypath session-id) session-pstate))
 
-(defn get-user-vote [session-users-vote-pstate {:keys [user-id session-id question-id]}]
-  (r/foreign-select-one (path/keypath user-id session-id question-id :vote) session-users-vote-pstate))
-
 (defn !lastest-users-in-session [session-pstate session-id]
   (belt/make-reactive-query (path/keypath session-id :users-id) session-pstate))
 
 (defn !lastest-start-at-session [session-pstate session-id]
   (belt/make-reactive-query (path/keypath session-id :start-at) session-pstate))
-
-(defn !latest-current-question-index [session-pstate session-id]
-  (belt/make-reactive-query (path/keypath session-id :current-question-index) session-pstate))
 
 (defn !latest-session-results [session-pstate session-id]
   (belt/make-reactive-query (path/keypath session-id :results) session-pstate))

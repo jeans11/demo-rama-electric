@@ -40,17 +40,11 @@
 (defn get-session-by-id [pstate session-id]
   (core/get-session-by-id pstate session-id))
 
-(defn get-user-vote [pstate payload]
-  (core/get-user-vote pstate payload))
-
 (defn !latest-users-in-session [pstate session-id]
   (core/!lastest-users-in-session pstate session-id))
 
 (defn !latest-start-at-session [pstate session-id]
   (core/!lastest-start-at-session pstate session-id))
-
-(defn !latest-current-question-index [pstate session-id]
-  (core/!latest-current-question-index pstate session-id))
 
 (defn !latest-session-results [pstate session-id]
   (core/!latest-session-results pstate session-id))
