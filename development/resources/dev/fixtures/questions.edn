@@ -1,25 +1,25 @@
-[{:question/id #uuid"6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
+[{:question/id "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
   :question/title "How many world champs did Loic Bruni win?"
-  :question/right-answer #uuid"38cff964-19b4-4d1a-b685-2386c8d10ffb"
-  :question/choices [{:question.choices/id #uuid"15500f7c-b49b-4792-99c0-6b9ea7c0f53c"
+  :question/right-answer "38cff964-19b4-4d1a-b685-2386c8d10ffb"
+  :question/choices [{:question.choices/id "15500f7c-b49b-4792-99c0-6b9ea7c0f53c"
                       :question.choices/value "3"}
-                     {:question.choices/id #uuid"57c8497b-e8a2-4a7d-a3c4-0122e2914553"
+                     {:question.choices/id "57c8497b-e8a2-4a7d-a3c4-0122e2914553"
                       :question.choices/value "4"}
-                     {:question.choices/id #uuid"38cff964-19b4-4d1a-b685-2386c8d10ffb"
+                     {:question.choices/id "38cff964-19b4-4d1a-b685-2386c8d10ffb"
                       :question.choices/value "5"}]}
- {:question/id #uuid"ed72d886-5c2c-4652-ae68-f84028abc5c5"
+ {:question/id "ed72d886-5c2c-4652-ae68-f84028abc5c5"
   :question/title "Did Aaron Gwin win the 2014 World Champ?"
-  :question/right-answer #uuid"9e86d373-8f37-4c36-bc6d-dfaa406a2de3"
-  :question/choices [{:question.choices/id #uuid"08c3f9cb-a811-4563-84f9-9c3ea6fc374f"
+  :question/right-answer "9e86d373-8f37-4c36-bc6d-dfaa406a2de3"
+  :question/choices [{:question.choices/id "08c3f9cb-a811-4563-84f9-9c3ea6fc374f"
                       :question.choices/value "Yes"}
-                     {:question.choices/id #uuid"9e86d373-8f37-4c36-bc6d-dfaa406a2de3"
+                     {:question.choices/id "9e86d373-8f37-4c36-bc6d-dfaa406a2de3"
                       :question.choices/value "No"}]}
- {:question/id #uuid"5da5069f-046f-49c3-8038-91507274dc34"
+ {:question/id "5da5069f-046f-49c3-8038-91507274dc34"
   :question/title "On which track did Danny Hart enter the legend?"
-  :question/right-answer #uuid"c139e9d0-cd4b-4840-bb92-b7683c706a7f"
-  :question/choices [{:question.choices/id #uuid"b278ed99-0e57-47c5-9c50-fce00bb19d27"
+  :question/right-answer "c139e9d0-cd4b-4840-bb92-b7683c706a7f"
+  :question/choices [{:question.choices/id "b278ed99-0e57-47c5-9c50-fce00bb19d27"
                       :question.choices/value "Val di Sole"}
-                     {:question.choices/id #uuid"c63efed0-e368-4d4c-8e86-b038ff312a2b"
+                     {:question.choices/id "c63efed0-e368-4d4c-8e86-b038ff312a2b"
                       :question.choices/value "Fort Williams"}
-                     {:question.choices/id #uuid"c139e9d0-cd4b-4840-bb92-b7683c706a7f"
+                     {:question.choices/id "c139e9d0-cd4b-4840-bb92-b7683c706a7f"
                       :question.choices/value "Champery"}]}]

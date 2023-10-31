@@ -46,6 +46,6 @@
               (dom/props {:class (styles :board/inner-container)})
               (case route-name
                 :quizzes (quiz-list/QuizList.)
-                :quiz (quiz-item/QuizItem. (uuid (-> route-match :path-params :id)))
                 :session (quiz-session/QuizSession. (uuid (-> route-match :path-params :id))
                                                     (uuid raw-user-id))))))))))
+                :quiz (quiz-item/QuizItem. (-> route-match :path-params :id))

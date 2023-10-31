@@ -1,74 +1,74 @@
-[{:quiz/id #uuid"2897dfb5-5b78-4c63-84b3-e35c8f943df5"
+[{:quiz/id "2897dfb5-5b78-4c63-84b3-e35c8f943df5"
   :quiz/title "Are you really a mountain bike DH fan?"
   :quiz/description "The Downhill (DH) is the Formula1 of the mountain bike."
   :quiz/level "easy"
   :quiz/max-player-per-session 2
-  :quiz/questions [{:quiz.questions/id #uuid"6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
+  :quiz/questions [{:quiz.questions/id "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
                     :quiz.questions/max-second-to-answer 9
                     :quiz.questions/points 1}
-                   {:quiz.questions/id #uuid"ed72d886-5c2c-4652-ae68-f84028abc5c5"
+                   {:quiz.questions/id "ed72d886-5c2c-4652-ae68-f84028abc5c5"
                     :quiz.questions/max-second-to-answer 9
                     :quiz.questions/points 2}
-                   {:quiz.questions/id #uuid"5da5069f-046f-49c3-8038-91507274dc34"
+                   {:quiz.questions/id "5da5069f-046f-49c3-8038-91507274dc34"
                     :quiz.questions/max-second-to-answer 9
                     :quiz.questions/points 3}]}
 
- {:quiz/id #uuid"8518e6a1-18ac-43ff-b90c-eec41b1be048"
+ {:quiz/id "8518e6a1-18ac-43ff-b90c-eec41b1be048"
   :quiz/title "JavaScript, what the fuck?"
   :quiz/description ""
   :quiz/level "difficult"
   :quiz/max-player-per-session 2
-  :quiz/questions [{:quiz.questions/id #uuid"6f9d7f01-fad4-4f1f-bafd-2203cd1118e0"
+  :quiz/questions [{:quiz.questions/id "6f9d7f01-fad4-4f1f-bafd-2203cd1118e0"
                     :quiz.questions/max-second-to-answer 15
                     :quiz.questions/points 1}
-                   {:quiz.questions/id #uuid"5743ecaa-9403-4730-bf7c-eec7a67540e3"
+                   {:quiz.questions/id "5743ecaa-9403-4730-bf7c-eec7a67540e3"
                     :quiz.questions/max-second-to-answer 10
                     :quiz.questions/points 2}
-                   {:quiz.questions/id #uuid"affc803f-8807-472b-8e8e-fdc466c8a45b"
+                   {:quiz.questions/id "affc803f-8807-472b-8e8e-fdc466c8a45b"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}
-                   {:quiz.questions/id #uuid"affc803f-8807-472b-8e8e-fdc466c8a45b"
+                   {:quiz.questions/id "affc803f-8807-472b-8e8e-fdc466c8a45b"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}
-                   {:quiz.questions/id #uuid"affc803f-8807-472b-8e8e-fdc466c8a45b"
+                   {:quiz.questions/id "affc803f-8807-472b-8e8e-fdc466c8a45b"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}
-                   {:quiz.questions/id #uuid"affc803f-8807-472b-8e8e-fdc466c8a45b"
+                   {:quiz.questions/id "affc803f-8807-472b-8e8e-fdc466c8a45b"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}]}
 
- {:quiz/id #uuid"439329d3-45c7-4419-b2e7-c7cb97c5b3a5"
+ {:quiz/id "439329d3-45c7-4419-b2e7-c7cb97c5b3a5"
   :quiz/title "You don't know Vim!"
   :quiz/description ""
   :quiz/level "hardcore"
   :quiz/max-player-per-session 2
-  :quiz/questions [{:quiz.questions/id #uuid"6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
+  :quiz/questions [{:quiz.questions/id "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"
                     :quiz.questions/max-second-to-answer 15
                     :quiz.questions/points 1}
-                   {:quiz.questions/id #uuid"ed72d886-5c2c-4652-ae68-f84028abc5c5"
+                   {:quiz.questions/id "ed72d886-5c2c-4652-ae68-f84028abc5c5"
                     :quiz.questions/max-second-to-answer 10
                     :quiz.questions/points 2}
-                   {:quiz.questions/id #uuid"5da5069f-046f-49c3-8038-91507274dc34"
+                   {:quiz.questions/id "5da5069f-046f-49c3-8038-91507274dc34"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}]}
 
- {:quiz/id #uuid"92ba9469-ed27-433f-a79a-7f2e1720f05e"
+ {:quiz/id "92ba9469-ed27-433f-a79a-7f2e1720f05e"
   :quiz/title "For time, 5 questions about CrossFit"
   :quiz/description ""
   :quiz/level "medium"
   :quiz/max-player-per-session 2
-  :quiz/questions [{:quiz.questions/id #uuid"f3e8c54e-2b98-4581-abd7-f698a4769629"
+  :quiz/questions [{:quiz.questions/id "f3e8c54e-2b98-4581-abd7-f698a4769629"
                     :quiz.questions/max-second-to-answer 15
                     :quiz.questions/points 1}
-                   {:quiz.questions/id #uuid"d9107b16-3be1-4d8f-b29a-f3448b5f29c5"
+                   {:quiz.questions/id "d9107b16-3be1-4d8f-b29a-f3448b5f29c5"
                     :quiz.questions/max-second-to-answer 10
                     :quiz.questions/points 2}
-                   {:quiz.questions/id #uuid"590ae174-1af0-4e39-b8f2-50ec1ba4332b"
+                   {:quiz.questions/id "590ae174-1af0-4e39-b8f2-50ec1ba4332b"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}
-                   {:quiz.questions/id #uuid"c5874845-0e30-40c4-8e17-8add0ba076d3"
+                   {:quiz.questions/id "c5874845-0e30-40c4-8e17-8add0ba076d3"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}
-                   {:quiz.questions/id #uuid"747f5f04-daa0-4781-ac9d-1214cb5196ce"
+                   {:quiz.questions/id "747f5f04-daa0-4781-ac9d-1214cb5196ce"
                     :quiz.questions/max-second-to-answer 7
                     :quiz.questions/points 3}]}]
