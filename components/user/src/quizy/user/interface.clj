@@ -4,8 +4,8 @@
 (defn get-signup-depot [cluster]
   (core/get-signup-depot cluster))
 
-(defn get-accounts-pstate [cluster]
-  (core/get-accounts-pstate cluster))
+(defn get-users-pstate [cluster]
+  (core/get-users-pstate cluster))
 
 (defn get-emails-pstate [cluster]
   (core/get-emails-pstate cluster))

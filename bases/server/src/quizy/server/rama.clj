@@ -1,16 +1,11 @@
 (ns quizy.server.rama
   (:require
-   [clojure.edn :as edn]
-   [clojure.java.io :as io]
-   [clojure.walk :as walk]
    [com.rpl.rama :as r]
    [com.rpl.rama.path :as path]
    [com.rpl.rama.test :as rtest]
    [quizy.quiz.interface :as quiz]
    [quizy.session.interface :as session]
-   [quizy.user.interface :as user])
-  (:import
-   (java.util UUID)))
+   [quizy.user.interface :as user]))
 
 (defonce system nil)
 
@@ -26,7 +21,7 @@
               :session-users (session/get-session-users-depot cluster)
               :session-user-votes (session/get-session-user-vote-depot cluster)
               :session-next-question (session/get-session-next-question-depot cluster)}
-     :pstates {:accounts (user/get-accounts-pstate cluster)
+     :pstates {:users (user/get-users-pstate cluster)
                :emails (user/get-emails-pstate cluster)
                :quizzes (quiz/get-quizzes-pstate cluster)
                :questions (quiz/get-questions-pstate cluster)
@@ -66,17 +61,17 @@
 
 (defn process-signup [payload]
   (let [id (user/send-signup (-get-depot :signup) payload)]
-    (if (user/check-signup (-get-pstate :accounts) id)
+    (if (user/check-signup (-get-pstate :users) id)
       {:status :idle :user-id id}
       {:status :error})))
 
 (defn process-login [payload]
-  (if-some [user-id (user/login (-get-pstates :accounts :emails) payload)]
+  (if-some [user-id (user/login (-get-pstates :users :emails) payload)]
     {:status :idle :user-id user-id}
     {:status :error}))
 
 (defn retrieve-logged-user [raw-user-id]
-  (user/get-user-by-id (-get-pstate :accounts) (UUID/fromString raw-user-id)))
+  (user/get-user-by-id (-get-pstate :users) raw-user-id))
 
 (defn retrieve-quizzes []
   (quiz/get-quizzes (-get-pstate :quizzes)))
@@ -121,7 +116,7 @@
                                        :next-question-index (inc (or current-question-index 0))}))
 
 (defn retrieve-current-leaderboard [users-id results]
-  (let [user-pstate (-get-pstate :accounts)]
+  (let [user-pstate (-get-pstate :users)]
     (->> (into [] (comp
                    (map #(hash-map :id %
                                    :display-name (r/foreign-select-one (path/keypath % :display-name) user-pstate)))
@@ -139,48 +134,6 @@
 
   system
 
-  (require '[clojure.java.io :as io])
-  (require '[clojure.edn :as edn])
-  (require '[clojure.walk :as walk])
-
-  (def questions (-> (io/resource "server/fixtures/questions.edn")
-                     (slurp)
-                     (edn/read-string)))
-
-  (def quizzes (-> (io/resource "server/fixtures/quizzes.edn")
-                   (slurp)
-                   (edn/read-string)))
-
-  quizzes
-  questions
-
-  (def question-depot (quiz/get-question-depot (:cluster system)))
-  (def quiz-depot (quiz/get-quiz-depot (:cluster system)))
-  (def session-depot (session/get-session-depot (:cluster system)))
-  (def session-user-depot (session/get-session-users-depot (:cluster system)))
-
-  (doseq [question questions]
-    (quiz/send-question question-depot (walk/postwalk
-                                         (fn [n] (if (keyword? n) (-> n (name) (keyword)) n))
-                                         question)))
-
-  (doseq [quiz quizzes]
-    (quiz/send-quiz {:quiz quiz-depot :session session-depot}
-                    (walk/postwalk
-                      (fn [n] (if (keyword? n) (-> n (name) (keyword)) n))
-                      quiz)))
-
-  (def user-id (random-uuid))
-  (def session-id #uuid"d7799a5b-2072-4740-a44a-846d65289bb4")
-
-  (session/send-user-session session-user-depot
-                             session-id
-                             user-id)
-
-  (session/remove-user-session session-user-depot
-                               session-id
-                               user-id)
-
   (stop-the-engine!)
   (start-the-engine!)
 
@@ -188,16 +141,16 @@
                    :password "secret"
                    :display-name "J"})
 
-  (def accounts-pstate (-get-pstate :accounts))
+  (def users-pstate (-get-pstate :users))
   (def questions-pstate (-get-pstate :questions))
   (def quizzes-pstate (-get-pstate :quizzes))
   (def sessions-pstate (-get-pstate :sessions))
 
-  (r/foreign-select path/ALL accounts-pstate)
+  (r/foreign-select path/ALL users-pstate)
   (r/foreign-select path/ALL questions-pstate)
   (r/foreign-select path/ALL quizzes-pstate)
   (r/foreign-select path/ALL sessions-pstate)
-  (r/foreign-select-one (path/keypath #uuid"10e5c34f-4efc-4de4-885a-1f88b1b39b5a") accounts-pstate)
+  (r/foreign-select-one (path/keypath #uuid"10e5c34f-4efc-4de4-885a-1f88b1b39b5a") users-pstate)
 
   (retrieve-questions [{:id #uuid "5da5069f-046f-49c3-8038-91507274dc34"}
                        {:id #uuid "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"}])

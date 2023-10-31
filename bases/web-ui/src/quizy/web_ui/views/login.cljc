@@ -15,7 +15,6 @@
                      {:secure? false
                       :raw? true
                       :same-site :strict})
-       (prn "foo")
        :idle)))
 
 (def styles
@@ -78,12 +77,23 @@
                   :type "text"
                   :placeholder "John"}))))
 
+(e/defn on-submit [signup? state]
+  (e/fn [e]
+    (.preventDefault e)
+    (let [{:keys [status] :as res} (e/server
+                                     (if signup?
+                                       (rama/process-signup state)
+                                       (rama/process-login state)))]
+      (if (= status :idle)
+        (when (= :idle (set-login-cookie (:user-id res)))
+          (set! (.-href js/window.location) "/quizzes"))
+        nil))))
+
 (e/defn Login [mode]
   (let [!state (atom {})
         signup? (= mode "signup")]
     (dom/div
       (dom/props {:class (styles :login/container)})
-      #_(dom/h1 (dom/props {:class (styles :login/title)}) (dom/text "Quizy"))
       (dom/div
         (dom/props {:class (styles :login/inner-container)})
         (dom/form
@@ -97,22 +107,11 @@
             (dom/props {:class (styles :login/actions)})
             (dom/button
               (dom/props {:class (styles :login/login-button)})
-              (dom/on "click" (e/fn [e]
-                                (.preventDefault e)
-                                (let [state @!state
-                                      {:keys [status] :as res} (e/server
-                                                                 (if signup?
-                                                                   (rama/process-signup state)
-                                                                   (rama/process-login state)))]
-                                  (if (= status :idle)
-                                    (when (= :idle (set-login-cookie (:user-id res)))
-                                      (set! (.-href js/window.location) "/quizzes"))
-                                    nil))))
+              (dom/on "click" (on-submit. signup? @!state))
               (dom/text (if signup? "Sign Up" "Sign In")))
             (dom/button
               (dom/props {:class (styles :login/signup-button)})
-              (dom/on "click" (e/fn [_]
-                                (routes/Navigate. (if signup? :login :signup) {})))
+              (dom/on "click" (e/fn [_] (routes/Navigate. (if signup? :login :signup) {})))
               (dom/text (if signup?
                           "You have an account"
                           "Don't have an account?")))))))))
