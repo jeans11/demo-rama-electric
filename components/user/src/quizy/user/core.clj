@@ -1,7 +1,8 @@
 (ns quizy.user.core
   (:require
    [com.rpl.rama :as r]
-   [com.rpl.rama.path :as path])
+   [com.rpl.rama.path :as path]
+   [quizy.belt.interface :as belt])
   (:import (java.util UUID)))
 
 (defrecord UserSignup [id email display-name password])
@@ -34,14 +35,17 @@
 
 (def signup-module-name (r/get-module-name SignupModule))
 
-(defn get-signup-depot [cluster]
-  (r/foreign-depot cluster signup-module-name *signup-depot))
+(def depots
+  [*signup-depot])
 
-(defn get-users-pstate [cluster]
-  (r/foreign-pstate cluster signup-module-name $$users))
+(def pstates
+  [$$emails-to-signup $$users])
 
-(defn get-emails-pstate [cluster]
-  (r/foreign-pstate cluster signup-module-name $$emails-to-signup))
+(defn export-depots [cluster]
+  (belt/make-depots-map cluster signup-module-name depots))
+
+(defn export-pstates [cluster]
+  (belt/make-pstates-map cluster signup-module-name pstates))
 
 (defn send-signup [signup-depot payload]
   (let [id (str (UUID/randomUUID))

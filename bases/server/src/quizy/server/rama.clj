@@ -15,19 +15,12 @@
 (defn -make-system [cluster]
   (fn [_]
     {:cluster cluster
-     :depots {:signup (user/get-signup-depot cluster)
-              :quiz (quiz/get-quiz-depot cluster)
-              :question (quiz/get-question-depot cluster)
-              :session-users (session/get-session-users-depot cluster)
-              :session-user-votes (session/get-session-user-vote-depot cluster)
-              :session-next-question (session/get-session-next-question-depot cluster)}
-     :pstates {:users (user/get-users-pstate cluster)
-               :emails (user/get-emails-pstate cluster)
-               :quizzes (quiz/get-quizzes-pstate cluster)
-               :questions (quiz/get-questions-pstate cluster)
-               :sessions (session/get-sessions-pstate cluster)
-               :quiz-sessions (quiz/get-quiz-sessions-pstate cluster)
-               :session-users-vote (session/get-session-users-vote-pstate cluster)}}))
+     :depots (merge (user/export-depots cluster)
+                    (quiz/export-depots cluster)
+                    (session/export-depots cluster))
+     :pstates (merge (user/export-pstates cluster)
+                     (quiz/export-pstates cluster)
+                     (session/export-pstates cluster))}))
 
 (defn -get-depot [key]
   (get-in system [:depots key]))
@@ -60,63 +53,63 @@
   :done)
 
 (defn process-signup [payload]
-  (let [id (user/send-signup (-get-depot :signup) payload)]
-    (if (user/check-signup (-get-pstate :users) id)
+  (let [id (user/send-signup (-get-depot :*signup-depot) payload)]
+    (if (user/check-signup (-get-pstate :$$users) id)
       {:status :idle :user-id id}
       {:status :error})))
 
 (defn process-login [payload]
-  (if-some [user-id (user/login (-get-pstates :users :emails) payload)]
+  (if-some [user-id (user/login (-get-pstates :$$users :$$emails-to-signup) payload)]
     {:status :idle :user-id user-id}
     {:status :error}))
 
 (defn retrieve-logged-user [raw-user-id]
-  (user/get-user-by-id (-get-pstate :users) raw-user-id))
+  (user/get-user-by-id (-get-pstate :$$users) raw-user-id))
 
 (defn retrieve-quizzes []
-  (quiz/get-quizzes (-get-pstate :quizzes)))
+  (quiz/get-quizzes (-get-pstate :$$quizzes)))
 
 (defn retrieve-quiz-by-id [quiz-id]
-  (quiz/get-quiz-by-id (-get-pstate :quizzes) quiz-id))
+  (quiz/get-quiz-by-id (-get-pstate :$$quizzes) quiz-id))
 
 (defn retrieve-quiz-sessions [quiz-id]
-  (quiz/get-quiz-sessions (-get-pstate :quiz-sessions) quiz-id))
+  (quiz/get-quiz-sessions (-get-pstate :$$quiz-sessions) quiz-id))
 
 (defn !latest-users-in-session [session-id]
-  (session/!latest-users-in-session (-get-pstate :sessions) session-id))
+  (session/!latest-users-in-session (-get-pstate :$$sessions) session-id))
 
 (defn !latest-start-at-session [session-id]
-  (session/!latest-start-at-session (-get-pstate :sessions) session-id))
+  (session/!latest-start-at-session (-get-pstate :$$sessions) session-id))
 
 (defn !latest-session-results [session-id]
-  (session/!latest-session-results (-get-pstate :sessions) session-id))
+  (session/!latest-session-results (-get-pstate :$$sessions) session-id))
+
+(defn !latest-session-status [session-id]
+  (session/!latest-session-status (-get-pstate :$$sessions) session-id))
+
+(defn !latest-session-current-question [session-id]
+  (session/!latest-session-current-question (-get-pstate :$$sessions) session-id))
+
+(defn !latest-session-next-question-at [session-id]
+  (session/!latest-session-next-question-at (-get-pstate :$$sessions) session-id))
 
 (defn add-user-to-session [session-id user-id]
-  (session/send-user-session (-get-depot :session-users) session-id user-id))
+  (session/send-user-session (-get-depot :*session-users-depot) session-id user-id))
 
 (defn remove-user-to-session [session-id user-id]
-  (session/remove-user-session (-get-depot :session-users) session-id user-id))
+  (session/remove-user-session (-get-depot :*session-users-depot) session-id user-id))
 
 (defn retrieve-session-by-id [session-id]
-  (session/get-session-by-id (-get-pstate :sessions) session-id))
+  (session/get-session-by-id (-get-pstate :$$sessions) session-id))
 
 (defn retrieve-question-by-id [question-id]
-  (quiz/get-question-by-id (-get-pstate :questions) question-id))
+  (quiz/get-question-by-id (-get-pstate :$$questions) question-id))
 
 (defn process-user-vote [payload]
-  (session/send-user-session-vote (-get-depot :session-user-votes) payload))
-
-(defn process-next-question [{:keys [session-id user-id current-question-index question-id right-choice points]}]
-  (session/send-session-next-question (-get-depot :session-next-question)
-                                      {:user-id user-id
-                                       :session-id session-id
-                                       :question-id question-id
-                                       :right-choice right-choice
-                                       :points points
-                                       :next-question-index (inc (or current-question-index 0))}))
+  (session/send-user-session-vote (-get-depot :*session-users-vote-depot) payload))
 
 (defn retrieve-current-leaderboard [users-id results]
-  (let [user-pstate (-get-pstate :users)]
+  (let [user-pstate (-get-pstate :$$users)]
     (->> (into [] (comp
                    (map #(hash-map :id %
                                    :display-name (r/foreign-select-one (path/keypath % :display-name) user-pstate)))
@@ -128,7 +121,7 @@
 (defn retrieve-questions [questions]
   (let [paths (mapv (fn [q] (path/keypath (:id q))) questions)]
     (r/foreign-select (apply path/multi-path paths)
-                      (-get-pstate :questions))))
+                      (-get-pstate :$$questions))))
 
 (comment
 
@@ -136,25 +129,5 @@
 
   (stop-the-engine!)
   (start-the-engine!)
-
-  (process-signup {:email "j@b.com"
-                   :password "secret"
-                   :display-name "J"})
-
-  (def users-pstate (-get-pstate :users))
-  (def questions-pstate (-get-pstate :questions))
-  (def quizzes-pstate (-get-pstate :quizzes))
-  (def sessions-pstate (-get-pstate :sessions))
-
-  (r/foreign-select path/ALL users-pstate)
-  (r/foreign-select path/ALL questions-pstate)
-  (r/foreign-select path/ALL quizzes-pstate)
-  (r/foreign-select path/ALL sessions-pstate)
-  (r/foreign-select-one (path/keypath #uuid"10e5c34f-4efc-4de4-885a-1f88b1b39b5a") users-pstate)
-
-  (retrieve-questions [{:id #uuid "5da5069f-046f-49c3-8038-91507274dc34"}
-                       {:id #uuid "6fe0cfe4-c41a-4486-ac52-f5f7790e4238"}])
-
-  (random-uuid)
 
   nil)

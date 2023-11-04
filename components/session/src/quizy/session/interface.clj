@@ -1,23 +1,11 @@
 (ns quizy.session.interface
   (:require [quizy.session.core :as core]))
 
-(defn get-session-depot [cluster]
-  (core/get-session-depot cluster))
+(defn export-depots [cluster]
+  (core/export-depots cluster))
 
-(defn get-session-users-depot [cluster]
-  (core/get-session-users-depot cluster))
-
-(defn get-session-user-vote-depot [cluster]
-  (core/get-session-user-vote-depot cluster))
-
-(defn get-session-next-question-depot [cluster]
-  (core/get-session-next-question-depot cluster))
-
-(defn get-sessions-pstate [cluster]
-  (core/get-sessions-pstate cluster))
-
-(defn get-session-users-vote-pstate [cluster]
-  (core/get-session-users-vote-pstate cluster))
+(defn export-pstates [cluster]
+  (core/export-pstates cluster))
 
 (defn get-session-module []
   (core/get-session-module))
@@ -34,9 +22,6 @@
 (defn send-user-session-vote [depot payload]
   (core/send-user-session-vote depot payload))
 
-(defn send-session-next-question [depot payload]
-  (core/send-session-next-question depot payload))
-
 (defn get-session-by-id [pstate session-id]
   (core/get-session-by-id pstate session-id))
 
@@ -48,3 +33,12 @@
 
 (defn !latest-session-results [pstate session-id]
   (core/!latest-session-results pstate session-id))
+
+(defn !latest-session-status [pstate session-id]
+  (core/!latest-session-status pstate session-id))
+
+(defn !latest-session-current-question [pstate session-id]
+  (core/!latest-session-current-question pstate session-id))
+
+(defn !latest-session-next-question-at [pstate session-id]
+  (core/!latest-session-next-question-at pstate session-id))

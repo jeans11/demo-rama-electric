@@ -1,20 +1,11 @@
 (ns quizy.quiz.interface
   (:require [quizy.quiz.core :as core]))
 
-(defn get-question-depot [cluster]
-  (core/get-question-depot cluster))
+(defn export-depots [cluster]
+  (core/export-depots cluster))
 
-(defn get-questions-pstate [cluster]
-  (core/get-questions-pstate cluster))
-
-(defn get-quiz-depot [cluster]
-  (core/get-quiz-depot cluster))
-
-(defn get-quizzes-pstate [cluster]
-  (core/get-quizzes-pstate cluster))
-
-(defn get-quiz-sessions-pstate [cluster]
-  (core/get-quiz-sessions-pstate cluster))
+(defn export-pstates [cluster]
+  (core/export-pstates cluster))
 
 (defn get-quiz-module []
   (core/get-quiz-module))

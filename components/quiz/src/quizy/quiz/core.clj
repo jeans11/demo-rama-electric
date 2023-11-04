@@ -2,7 +2,8 @@
   (:require
    [com.rpl.rama :as r]
    [com.rpl.rama.path :as path]
-   [quizy.session.interface :as session])
+   [quizy.session.interface :as session]
+   [quizy.belt.interface :as belt])
   (:import
    (java.util UUID)))
 
@@ -54,11 +55,13 @@
                  ;; Quiz
                  (r/source> *quiz-depot :> {:keys [*id *session-id *questions] :as *quiz})
                  (count *questions :> *total-question)
+                 (r/|hash *id)
                  (r/local-transform> [(path/keypath *id)
                                       path/NIL->LIST
                                       path/AFTER-ELEM
                                       (path/termval *session-id)]
                                      $$quiz-sessions)
+                 (r/|hash *id)
                  (r/local-transform> [(path/keypath *id)
                                       (path/termval (into {:total-question *total-question}
                                                           (dissoc *quiz :id :session-id)))]
@@ -66,20 +69,17 @@
 
 (def quiz-module-name (r/get-module-name QuizModule))
 
-(defn get-question-depot [cluster]
-  (r/foreign-depot cluster quiz-module-name *question-depot))
+(def depots
+  [*quiz-depot *question-depot])
 
-(defn get-questions-pstate [cluster]
-  (r/foreign-pstate cluster quiz-module-name $$questions))
+(def pstates
+  [$$quizzes $$questions $$quiz-sessions])
 
-(defn get-quiz-depot [cluster]
-  (r/foreign-depot cluster quiz-module-name *quiz-depot))
+(defn export-depots [cluster]
+  (belt/make-depots-map cluster quiz-module-name depots))
 
-(defn get-quizzes-pstate [cluster]
-  (r/foreign-pstate cluster quiz-module-name $$quizzes))
-
-(defn get-quiz-sessions-pstate [cluster]
-  (r/foreign-pstate cluster quiz-module-name $$quiz-sessions))
+(defn export-pstates [cluster]
+  (belt/make-pstates-map cluster quiz-module-name pstates))
 
 (defn send-question [question-depot question]
   (let [question-record (map->QuestionRecord (update-keys question keyword))]
@@ -90,7 +90,8 @@
         quiz-record (map->QuizRecord (assoc quiz :session-id session-id))]
     (session/send-session (:session depots) {:id session-id
                                              :quiz-id (:id quiz-record)
-                                             :users-id #{}})
+                                             :users-id #{}
+                                             :max-users 2})
     (r/foreign-append! (:quiz depots) quiz-record)))
 
 (defn get-quiz-module [] QuizModule)

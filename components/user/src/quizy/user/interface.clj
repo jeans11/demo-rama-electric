@@ -1,14 +1,11 @@
 (ns quizy.user.interface
   (:require [quizy.user.core :as core]))
 
-(defn get-signup-depot [cluster]
-  (core/get-signup-depot cluster))
+(defn export-depots [cluster]
+  (core/export-depots cluster))
 
-(defn get-users-pstate [cluster]
-  (core/get-users-pstate cluster))
-
-(defn get-emails-pstate [cluster]
-  (core/get-emails-pstate cluster))
+(defn export-pstates [cluster]
+  (core/export-pstates cluster))
 
 (defn get-user-by-id [pstate user-id]
   (core/get-user-by-id pstate user-id))
