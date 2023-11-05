@@ -35,7 +35,7 @@
   (println "Start rama cluster...")
   (let [cluster (rtest/create-ipc)]
     (try
-      (-run-module cluster (user/get-signup-module))
+      (-run-module cluster (user/get-user-module))
       (-run-module cluster (quiz/get-quiz-module))
       (-run-module cluster (session/get-session-module))
       (alter-var-root #'system (-make-system cluster))

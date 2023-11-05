@@ -19,5 +19,5 @@
 (defn login [pstates payload]
   (core/login pstates payload))
 
-(defn get-signup-module []
-  (core/get-signup-module))
+(defn get-user-module []
+  (core/get-user-module))

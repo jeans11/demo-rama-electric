@@ -15,7 +15,7 @@
 
 ;; For the moment disable kondo on the defmodule
 #_:clj-kondo/ignore
-(r/defmodule SignupModule [setup topo]
+(r/defmodule UserModule [setup topo]
   (r/declare-depot setup *signup-depot (r/hash-by :email))
   (let [s (r/stream-topology topo "signup")]
     (r/declare-pstate s $$emails-to-signup {String String})
@@ -25,15 +25,14 @@
     (r/<<sources s
                  (r/source> *signup-depot :> {:keys [*id *email] :as *user})
                  (r/local-select> (path/keypath *email) $$emails-to-signup :> *existing-id)
-                 (r/<<if (r/or> (nil? *existing-id)
-                                (= *id *existing-id))
+                 (r/<<if (r/or> (nil? *existing-id) (= *id *existing-id))
                          (r/local-transform> [(path/keypath *email) (path/termval *id)] $$emails-to-signup)
                          (r/|hash *id)
                          (r/local-transform> [(path/keypath *id)
                                               (path/termval (into {} (dissoc *user :id)))]
                                              $$users)))))
 
-(def signup-module-name (r/get-module-name SignupModule))
+(def signup-module-name (r/get-module-name UserModule))
 
 (def depots
   [*signup-depot])
@@ -65,5 +64,5 @@
       (when (= password (get user "password"))
         user-id))))
 
-(defn get-signup-module []
-  SignupModule)
+(defn get-user-module []
+  UserModule)
