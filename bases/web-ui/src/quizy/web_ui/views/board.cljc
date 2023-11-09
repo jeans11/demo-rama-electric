@@ -39,13 +39,13 @@
           user (rama/retrieve-logged-user raw-user-id)]
       (e/client
         (binding [current-user user]
-          (dom/div
-            (dom/props {:class (styles :board/container)})
-            (Header.)
+          (let [param-id (-> route-match :path-params :id)]
             (dom/div
-              (dom/props {:class (styles :board/inner-container)})
-              (case route-name
-                :quizzes (quiz-list/QuizList.)
-                :quiz (quiz-item/QuizItem. (-> route-match :path-params :id))
-                :session (quiz-session/QuizSession. (-> route-match :path-params :id)
-                                                    raw-user-id)))))))))
+              (dom/props {:class (styles :board/container)})
+              (Header.)
+              (dom/div
+                (dom/props {:class (styles :board/inner-container)})
+                (case route-name
+                  :quizzes (quiz-list/QuizList.)
+                  :quiz (quiz-item/QuizItem. param-id raw-user-id)
+                  :session (quiz-session/QuizSession. param-id raw-user-id))))))))))

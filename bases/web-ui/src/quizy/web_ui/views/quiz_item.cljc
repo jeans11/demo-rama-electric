@@ -23,15 +23,17 @@
                                 :items-center
                                 :cursor-pointer)})
 
-(e/defn QuizSessionItem [session-id max-player]
+(e/defn QuizSessionItem [session-id max-player user-id]
   (let [current-users (e/server (new (rama/!latest-users-in-session session-id)))]
     (dom/div
       (dom/props {:class (styles :session-item/container)})
-      (dom/on "click" (e/fn [_] (routes/Navigate. :session {:path-params {:id (str session-id)}})))
+      (dom/on "click" (e/fn [_]
+                        (e/server (rama/add-user-to-session session-id user-id))
+                        (routes/Navigate. :session {:path-params {:id (str session-id)}})))
       (dom/p (dom/text (last (str/split (str session-id) #"-"))))
       (dom/p (dom/text (str (count current-users) " / " max-player "  attendees"))))))
 
-(e/defn QuizItem [quiz-id]
+(e/defn QuizItem [quiz-id user-id]
   (let [quiz (e/server (rama/retrieve-quiz-by-id quiz-id))]
     (dom/div
       (dom/props {:class (styles :quiz-item/container)})
@@ -57,4 +59,4 @@
         (e/server
           (e/for [session-id (rama/retrieve-quiz-sessions quiz-id)]
             (e/client
-              (QuizSessionItem. session-id (:max-player-per-session quiz)))))))))
+              (QuizSessionItem. session-id (:max-player-per-session quiz) user-id))))))))

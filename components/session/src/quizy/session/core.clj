@@ -1,10 +1,9 @@
 (ns quizy.session.core
   (:require
    [com.rpl.rama :as r]
-   [com.rpl.rama.path :as path]
    [com.rpl.rama.ops :as ops]
-   [quizy.belt.interface :as belt]
-   [clojure.string :as str])
+   [com.rpl.rama.path :as path]
+   [quizy.belt.interface :as belt])
   (:import
    (com.rpl.rama.helpers TopologyScheduler)))
 
@@ -27,56 +26,44 @@
 (def $$sessions "$$sessions")
 (def $$session-users-vote "$$session-users-vote")
 (def $$session-users-result "$$session-users-result")
+;; mirrors
 (def $$quizzes "$$quizzes")
 (def $$questions "$$questions")
 
-(defn schedule-item [ts exp data]
-  (.scheduleItem ts exp data))
-
-(defn compute-questions-expiration [questions]
+(defn prepare-questions [questions session-id session-token]
   (loop [[h & t] questions
          time 0
+         points 0
          res []]
     (if-not (nil? h)
-      (let [exp (get-expiration-time time)]
+      (let [exp (get-expiration-time time)
+            max-second-to-answer (inc (:max-second-to-answer h))]
         (recur t
-               (+ time (:max-second-to-answer h))
-               (conj res (assoc h :exp exp))))
+               (+ time max-second-to-answer)
+               (:points h)
+               (conj res (assoc h
+                                :session-id session-id
+                                :session-token session-token
+                                :exp exp
+                                :max-second-to-answer max-second-to-answer
+                                :points points))))
       (conj res {:exp (get-expiration-time time)
-                 :end true}))))
+                 :end true
+                 :points points
+                 :session-id session-id
+                 :session-token session-token}))))
 
 (defn compute-session-users-result
   [current-session-results old-question-users-vote old-question-right-answer old-question-points]
   (reduce-kv
    (fn [acc k {:keys [vote]}]
      (update acc k (fn [current-points]
-                     (if (= vote old-question-right-answer)
-                       (+ (or current-points 0) old-question-points)
-                       current-points))))
+                     (let [current-points (or current-points 0)]
+                       (if (= vote old-question-right-answer)
+                         (+ current-points old-question-points)
+                         current-points)))))
    current-session-results
    old-question-users-vote))
-
-#_:clj-kondo/ignore
-(r/deframafn get-session-quiz-id [*session-id $$sessions]
-  (r/local-select> (path/keypath *session-id :quiz-id) $$sessions :> *quiz-id)
-  (:> *quiz-id))
-
-#_:clj-kondo/ignore
-(r/deframafn update-session-status [*session-id $$sessions *status]
-  (r/local-transform> [(path/keypath *session-id :status) (path/termval *status)] $$sessions)
-  (:>))
-
-#_:clj-kondo/ignore
-(r/deframafn init-session [*session-id *questions $$sessions]
-  (first *questions :> {*question-id :id *second :max-second-to-answer})
-  (rest *questions :> *rest-questions)
-  (get-expiration-time *second :> *next-question-at)
-  (r/local-transform> [(path/keypath *session-id)
-                       (path/multi-path [:current-question (path/termval *question-id)]
-                                        [:status (path/termval "started")]
-                                        [:next-question-at (path/termval *next-question-at)])]
-                      $$sessions)
-  (:> *rest-questions))
 
 #_:clj-kondo/ignore
 (r/defmodule SessionModule [setup topo]
@@ -102,6 +89,7 @@
                                              :next-question-at Long
                                              :status String
                                              :start-at Long
+                                             :token String
                                              :results {String Long}})})
     ;; Users vote
     (r/declare-pstate s $$session-users-vote {String {String {String (r/fixed-keys-schema {:vote String})}}})
@@ -118,15 +106,18 @@
        ;; Here handle the start of a session
        (r/java-block<-
         (r/local-select> (path/keypath *id :status) $$sessions :> *session-status)
-        (r/<<if (not= "started" *session-status)
-                (get-session-quiz-id *id $$sessions :> *quiz-id)
+        (r/local-select> [(path/keypath *id :users-id) (path/view count)] $$sessions :> *total-user)
+        (r/<<if (r/or> (= "waiting" *session-status) (not= (zero? *total-user)))
+                (str (random-uuid) :> *token) ;; Handle stale questions
+                (r/local-select> (path/keypath *id :quiz-id) $$sessions :> *quiz-id)
                 (r/select> (path/keypath *quiz-id :questions) $$quizzes :> *questions)
-                (compute-questions-expiration *questions :> *questions-with-exp)
-                (init-session *id *questions-with-exp $$sessions :> *rest-questions)
-                (ops/explode *rest-questions :> *question)
-                (get *question :exp :> *expiration)
-                (assoc *question :session-id *id :> *question-data)
+                (prepare-questions *questions *id *token :> *prepared-questions)
+                (r/local-transform> [(path/keypath *id)
+                                     (path/multi-path [:status (path/termval "started")]
+                                                      [:token (path/termval *token)])] $$sessions)
                 ;; Each question is scheduled for future processing
+                (ops/explode *prepared-questions :> *question-data)
+                (get *question-data :exp :> *expiration)
                 (r/java-macro! (.scheduleItem ts-quiz-session "*expiration" "*question-data"))))))
 
      (r/java-macro!
@@ -134,30 +125,36 @@
        ts-quiz-session "*question-data" "*currentTime"
        ;; Here handle the process of question
        (r/java-block<-
-        (identity *question-data :> {:keys [*id *session-id *max-second-to-answer *end *points]})
-        (r/local-select> (path/keypath *session-id :current-question) $$sessions :> *old-question-id)
-        (r/<<if (not *end)
-                (get-expiration-time *max-second-to-answer :> *next-question-at)
-                (r/local-transform> [(path/keypath *session-id)
-                                     (path/multi-path [:current-question (path/termval *id)]
-                                                      [:next-question-at (path/termval *next-question-at)])]
-                                    $$sessions)
-                (r/else>)
-                (r/local-transform> [(path/keypath *session-id)
-                                     (path/multi-path [:current-question (path/termval nil)]
-                                                      [:next-question-at (path/termval nil)]
-                                                      [:status (path/termval "result")])]
-                                    $$sessions))
-        (r/select> (path/keypath *old-question-id :right-answer) $$questions :> *old-question-right-answer)
-        (r/local-select> (path/keypath *session-id *old-question-id) $$session-users-vote :> *old-question-users-vote)
-        (r/local-select> (path/keypath *session-id :results) $$sessions :> *current-session-results)
-        (compute-session-users-result *current-session-results
-                                      *old-question-users-vote
-                                      *old-question-right-answer
-                                      *points :> *session-results)
-        (r/local-transform> [(path/keypath *session-id :results)
-                             (path/termval *session-results)]
-                            $$sessions))))
+        (identity *question-data :> {:keys [*id *session-id *max-second-to-answer *end *points *session-token]})
+        (r/local-select> (path/keypath *session-id :token) $$sessions :> *current-session-token)
+        (r/local-select> (path/keypath *session-id :status) $$sessions :> *session-status)
+        ;; Ensure that stale scheduled question are not processed
+        (r/<<if (r/and> (= *current-session-token *session-token) (= "started" *session-status))
+                (r/local-select> (path/keypath *session-id :current-question) $$sessions :> *old-question-id)
+                (r/<<if (not *end)
+                        (get-expiration-time *max-second-to-answer :> *next-question-at)
+                        (r/local-transform> [(path/keypath *session-id)
+                                             (path/multi-path [:current-question (path/termval *id)]
+                                                              [:next-question-at (path/termval *next-question-at)])]
+                                            $$sessions)
+                        ;; End of the quiz, display results/answers
+                        (r/else>)
+                        (r/local-transform> [(path/keypath *session-id)
+                                             (path/multi-path [:current-question (path/termval nil)]
+                                                              [:next-question-at (path/termval nil)]
+                                                              [:status (path/termval "result")])]
+                                            $$sessions))
+                ;; Compute results after each questions
+                (r/select> (path/keypath *old-question-id :right-answer) $$questions :> *old-question-right-answer)
+                (r/local-select> (path/keypath *session-id *old-question-id) $$session-users-vote :> *old-question-users-vote)
+                (r/local-select> (path/keypath *session-id :results) $$sessions :> *current-session-results)
+                (compute-session-users-result *current-session-results
+                                              *old-question-users-vote
+                                              *old-question-right-answer
+                                              *points :> *session-results)
+                (r/local-transform> [(path/keypath *session-id :results)
+                                     (path/termval *session-results)]
+                                    $$sessions)))))
 
      ;; Session
      (r/source> *session-depot :> {:keys [*id] :as *session})
@@ -176,7 +173,7 @@
                                  $$sessions)
              ;; The first user start the waiting session counter
              (r/<<if (zero? *total-user)
-                     (get-expiration-time 10 :> *start-at)
+                     (get-expiration-time 11 :> *start-at)
                      (r/java-macro! (.scheduleItem ts-start-session "*start-at" "*session-id"))
                      (r/local-transform> [(path/keypath *session-id)
                                           (path/multi-path [:start-at (path/termval *start-at)]
@@ -192,10 +189,14 @@
      (r/<<if (= *action "remove")
              (r/local-transform> [(path/keypath *session-id :users-id) (path/set-elem *user-id) r/NONE>]
                                  $$sessions)
+             ;; The last user reset the sessions
              (r/<<if (= *total-user 1)
                      (r/local-transform> [(path/keypath *session-id)
                                           (path/multi-path [:start-at (path/termval nil)]
+                                                           [:current-question (path/termval nil)]
+                                                           [:next-question-at (path/termval nil)]
                                                            [:results (path/termval {})]
+                                                           [:token (path/termval nil)]
                                                            [:status (path/termval "empty")])]
                                          $$sessions)))
      ;; User vote

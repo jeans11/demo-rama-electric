@@ -53,7 +53,8 @@
     id))
 
 (defn get-user-by-id [users-pstate user-id]
-  (r/foreign-select-one (path/keypath user-id) users-pstate))
+  (assoc (r/foreign-select-one (path/keypath user-id) users-pstate)
+         :id user-id))
 
 (defn check-signup [users-pstate user-id]
   (some? (get-user-by-id users-pstate user-id)))
