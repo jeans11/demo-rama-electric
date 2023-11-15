@@ -20,7 +20,7 @@ For more information about it, check the [documentation](https://github.com/hype
 
 ## The Demo
 
-https://github.com/jeans11/demo-rama-electric/assets/7700239/d2fd7454-a89c-464d-bcdf-0f80f195af09
+https://github.com/jeans11/demo-rama-electric/assets/7700239/e7f0352b-cf49-4c6a-bb89-f686641325cb
 
 ### Context
 
