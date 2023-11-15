@@ -20,6 +20,8 @@ For more information about it, check the [documentation](https://github.com/hype
 
 ## The Demo
 
+https://github.com/jeans11/demo-rama-electric/assets/7700239/d2fd7454-a89c-464d-bcdf-0f80f195af09
+
 ### Context
 
 It's a multiplayer quiz app. The idea behind it is to demonstrate the capabilities of this new technology to easily create complex real-time features. This two libs can enter the dev of web application in the next level:
