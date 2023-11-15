@@ -13,7 +13,7 @@
 (defn generate-css []
   (let [result
         (-> @css-ref
-            (cb/generate '{:ui {:include [quizy*]}})
+            (cb/generate '{:ui {:include [dre*]}})
             (cb/write-outputs-to output-dir))]
 
     (println :CSS-GENERATED)

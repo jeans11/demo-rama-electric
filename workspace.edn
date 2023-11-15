@@ -1,4 +1,4 @@
-{:top-namespace "quizy"
+{:top-namespace "dre"
  :interface-ns "interface"
  :default-profile-name "default"
  :compact-views #{}

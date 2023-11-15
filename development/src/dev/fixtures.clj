@@ -3,7 +3,7 @@
    [clojure.edn :as edn]
    [clojure.java.io :as io]
    [clojure.walk :as walk]
-   [quizy.quiz.interface :as quiz]))
+   [dre.quiz.interface :as quiz]))
 
 (defn -unqualify [m]
   (walk/postwalk

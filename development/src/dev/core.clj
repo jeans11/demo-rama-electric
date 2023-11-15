@@ -2,8 +2,8 @@
   (:require
    [dev.css :as css]
    [dev.fixtures :as fixtures]
-   [quizy.server.core :as server]
-   [quizy.server.rama :as rama]
+   [dre.server.core :as server]
+   [dre.server.rama :as rama]
    [shadow.cljs.devtools.api :as shadow.api]
    [shadow.cljs.devtools.server :as shadow.server]))
 
